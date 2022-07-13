@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A service wrapper for GraphicsMagic or ImageMagic for Arragro services, intended as a microservice for image manipulation",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "node test/index.js",
     "debug": "nodemon --watch ./ --inspect=0.0.0.0:9222 --nolazy ./index.js",
@@ -20,19 +21,21 @@
   },
   "homepage": "https://github.com/Arragro/Arragro.ImageService#readme",
   "devDependencies": {
-    "jest": "^23.6.0",
-    "nodemon": "^1.19.1"
+    "jest": "^26.6.3",
+    "nodemon": "^2.0.7"
   },
   "dependencies": {
-    "bluebird": "^3.5.2",
-    "express": "^4.16.3",
+    "bluebird": "^3.7.2",
+    "exec-buffer": "^3.2.0",
+    "express": "^4.18.1",
     "fs": "0.0.1-security",
     "gm": "^1.23.1",
-    "imagemin": "^6.0.0",
-    "imagemin-gifsicle": "^5.2.0",
-    "is-gif": "^2.0.0",
-    "mime-types": "^2.1.20",
-    "multer": "^1.3.1",
+    "gifsicle": "^7.0.1",
+    "imagemin": "^8.0.1",
+    "imagemin-gifsicle": "^7.0.0",
+    "is-gif": "^4.0.1",
+    "mime-types": "^2.1.35",
+    "multer": "^1.4.5-lts.1",
     "simple-bufferstream": "^1.0.0",
     "stream-to-array": "^2.3.0"
   }

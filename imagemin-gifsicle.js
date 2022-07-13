@@ -1,9 +1,8 @@
-'use strict';
-const execBuffer = require('exec-buffer');
-const gifsicle = require('gifsicle');
-const isGif = require('is-gif');
+import execBuffer from 'exec-buffer';
+import gifsicle from 'gifsicle';
+import isGif from 'is-gif';
 
-module.exports = opts => buf => {
+const imageminGifsicle = opts => buf => {
 	opts = Object.assign({}, opts);
 
 	if (!Buffer.isBuffer(buf)) {
@@ -43,3 +42,5 @@ module.exports = opts => buf => {
 		throw err;
 	});
 };
+
+export default imageminGifsicle

@@ -1,17 +1,19 @@
-const fs = require('fs')
-const util = require('util')
-const Promise = require('bluebird');
+import fs from 'fs'
+import util from 'util'
+import Promise from 'bluebird'
 
-const gm = require('gm').subClass({imageMagick: true});
-const express = require('express');
-const multer = require('multer');
-const imagemin = require('imagemin');
-const imageminGifSicle = require('./imagemin-gifsicle');
-const toArray = require('stream-to-array');
-const sbuff = require('simple-bufferstream');
-const mimetypes = require('mime-types');
+import gm from 'gm';
+const im = gm.subClass({ imageMagick: true });
 
-Promise.promisifyAll(gm.prototype);
+import express from 'express';
+import multer from 'multer';
+import imagemin from 'imagemin';
+import imageminGifSicle from './imagemin-gifsicle.js';
+import toArray from 'stream-to-array';
+import sbuff from 'simple-bufferstream';
+import mimetypes from 'mime-types';
+
+Promise.promisifyAll(im.prototype);
 
 function fileFilter(req, file, cb) {
     console.log('file is', file)
@@ -21,7 +23,9 @@ function fileFilter(req, file, cb) {
 const storage = multer.memoryStorage();
 const upload = multer({ dest: 'uploads/', storage: storage });
 const app = express();
-app.use(express.static('public'));
+app.use(express.static('public', {
+    index: process.env['securityKey'] === undefined || process.env['securityKey'].length < 10 ? 'index-security-key.html' : 'index.html'
+}));
 
 function getBinaryData(req, res, next) {
     var data = [];
@@ -61,11 +65,11 @@ async function processGif (features, buffer, options) {
         width = options.width;
     }
 
-    return await imagemin.buffer(buffer, {use: [imageminGifSicle({ interlaced: true, optimizationLevel: 3, resize: width })]});
+    return await imagemin.buffer(buffer, {plugins: [imageminGifSicle({ interlaced: true, optimizationLevel: 3, resize: width })]});
 }
 
 async function processImage (features, buffer, options) {
-    let image = new gm(buffer)
+    let image = new im(buffer)
         .strip()
         .interlace('Line')
         .quality(options.quality)
@@ -103,7 +107,7 @@ async function processResizeAndRespond (req, res, features, options) {
         console.timeEnd("handleResize");
 
         console.time("size");
-        var size = await gm(buffer).sizeAsync();
+        var size = await im(buffer).sizeAsync();
         console.timeEnd("size");
 
         var header = {
@@ -124,18 +128,26 @@ async function processResizeAndRespond (req, res, features, options) {
     }
 }
 
-app.post('/image/resize', upload.single('image'), async function (req, res, next) {
-    if (!req.file || !req.body) {
+app.post('/image/details', upload.single('image'), async function (req, res, next) {
+    if (!req.file) {
         res.status(500).send({ 
             error: 'You need to supply a file with options'
         });
         return;
     }
     let options = req.body;
+    const headers = req.headers
+
+    if (!headers["security-key"] || headers["security-key"] !== process.env['securityKey']) {
+        res.status(401).send({
+            message: 'You are not authorised to use this service.'
+        })
+        return;
+    }
 
     try {
         console.time("size");
-        var size = await gm(req.file.buffer).sizeAsync();
+        var size = await im(req.file.buffer).sizeAsync();
         console.timeEnd("size");
         
         if (!options.width || isNaN(parseInt(options.width))) {
@@ -148,7 +160,60 @@ app.post('/image/resize', upload.single('image'), async function (req, res, next
 
         const features = {
             size: size,
-            format: await gm(req.file.buffer).formatAsync()
+            format: await im(req.file.buffer).formatAsync()
+        }
+
+        var result = {
+            size: req.file.buffer.length,
+            mimeType: getMimeType(features),
+            height: size.height,
+            width: size.width,
+            isImage: features.format !== 'SVG' && features.format !== 'MVG'
+        }        
+        res.status(200).send(result)
+    }
+    catch (err) {
+        console.log('Error', err);
+        res.status(500).send({ 
+            error: 'Something has gone wrong when identifying the file!',
+            message: err.message
+        });
+    }
+});
+
+app.post('/image/resize', upload.single('image'), async function (req, res, next) {
+    if (!req.file || !req.body) {
+        res.status(500).send({ 
+            error: 'You need to supply a file with options'
+        });
+        return;
+    }
+    const options = req.body;
+    const headers = req.headers
+
+    if (!headers["securityey"] || headers["securityKey"] !== process.env['securityKey']) {
+        res.status(401).send({
+            message: 'You are not authorised to use this service.'
+        })
+        return;
+    }
+
+    try {
+        console.time("size");
+        var size = await im(req.file.buffer).sizeAsync();
+        console.timeEnd("size");
+        
+        if (!options.width || isNaN(parseInt(options.width))) {
+            options.width = size.width
+        }
+        
+        if (!options.quality || isNaN(parseInt(options.quality))) {
+            options.quality = 80
+        }
+
+        const features = {
+            size: size,
+            format: await im(req.file.buffer).formatAsync()
         }
 
         await processResizeAndRespond(req, res, features, options)
