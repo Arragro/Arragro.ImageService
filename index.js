@@ -191,7 +191,7 @@ app.post('/image/resize', upload.single('image'), async function (req, res, next
     const options = req.body;
     const headers = req.headers
 
-    if (!headers["securityey"] || headers["securityKey"] !== process.env['securityKey']) {
+    if (!headers["security-key"] || headers["security-key"] !== process.env['securityKey']) {
         res.status(401).send({
             message: 'You are not authorised to use this service.'
         })
